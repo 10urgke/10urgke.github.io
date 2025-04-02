@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Havalı Kalp Animasyonu</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #000;
+      font-family: Arial, sans-serif;
+    }
+    canvas {
+      display: block;
+    }
+    .input-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 20;
+      text-align: center;
+    }
+    .input-label {
+      margin-bottom: 15px;
+      color: #fff;
+      font-size: 20px;
+    }
+    .input-container input {
+      padding: 12px 20px;
+      font-size: 20px;
+      border: none;
+      border-radius: 5px;
+      outline: none;
+      margin-right: 10px;
+    }
+    .input-container button {
+      padding: 12px 20px;
+      font-size: 20px;
+      border: none;
+      border-radius: 5px;
+      background: #ff2e63;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .input-container button:hover {
+      background: #e02656;
+    }
+    #nameDisplay {
+      position: absolute;
+      top: calc(50% - 100px);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 30;
+      color: #fff;
+      font-size: 30px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="nameDisplay"></div>
+  <div class="input-container" id="inputContainer">
+    <div class="input-label">İğneden korkan güzelin ismi ?</div>
+    <input type="text" id="nameInput">
+    <button id="startButton">Yolla</button>
+  </div>
+  <canvas id="heartCanvas"></canvas>
+  <script>
+    const canvas = document.getElementById('heartCanvas');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width;
+      canvas.height = height;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+    let isAnimating = false;
+    function heartParam(t) {
+      const x = 16 * Math.pow(Math.sin(t), 3);
+      const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+      return [x, y];
+    }
+    const particleCount = 400;
+    const scale = 25;
+    const swirlParticles = [];
+    for (let i = 0; i < particleCount; i++) {
+      const t = Math.random() * 2 * Math.PI;
+      const dt = (Math.random() * 0.04) - 0.02;
+      swirlParticles.push({
+        t: t,
+        dt: dt,
+        x: 0,
+        y: 0,
+        color: 'rgba(255, 50, 100, 0.15)'
+      });
+    }
+    function animate() {
+      requestAnimationFrame(animate);
+      if (!isAnimating) {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, width, height);
+        return;
+      }
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+      ctx.fillRect(0, 0, width, height);
+      ctx.globalCompositeOperation = 'lighter';
+      swirlParticles.forEach(p => {
+        const oldX = p.x;
+        const oldY = p.y;
+        p.t += p.dt;
+        const [hx, hy] = heartParam(p.t);
+        p.x = width / 2 + hx * scale;
+        p.y = height / 2 - hy * scale;
+        ctx.beginPath();
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = 2;
+        ctx.moveTo(oldX, oldY);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.fillStyle = p.color;
+        ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.save();
+      ctx.translate(width / 2, height / 2);
+      ctx.scale(scale, -scale);
+      ctx.beginPath();
+      for (let t = 0; t <= 2 * Math.PI; t += 0.01) {
+        const [x, y] = heartParam(t);
+        if (t === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.closePath();
+      const time = Date.now();
+      const pulsate = 0.5 + 0.5 * Math.sin(time / 200);
+      const gradient = ctx.createRadialGradient(50, 50, 0, 50, 50, 50);
+      gradient.addColorStop(0, `rgba(255,100,150,${0.6 * pulsate})`);
+      gradient.addColorStop(1, 'rgba(255,100,150,0)');
+      ctx.fillStyle = gradient;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 50, 100, 0.6)';
+      ctx.lineWidth = 0.05;
+      ctx.stroke();
+      ctx.restore();
+      ctx.save();
+      ctx.fillStyle = "#ff2e63";
+      ctx.font = Math.min(width, height) / 15 + "px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.shadowColor = "#ff2e63";
+      ctx.shadowBlur = 20;
+      ctx.fillText("hastaneye git aşkım", width / 2, height / 2);
+      ctx.restore();
+    }
+    animate();
+    const startButton = document.getElementById('startButton');
+    const nameInput = document.getElementById('nameInput');
+    const inputContainer = document.getElementById('inputContainer');
+    const nameDisplay = document.getElementById('nameDisplay');
+    function startSwirl() {
+      if (nameInput.value.trim() !== '') {
+        isAnimating = true;
+        nameDisplay.textContent = nameInput.value;
+        inputContainer.style.display = 'none';
+      }
+    }
+    // Hem tıklama hem de dokunma olaylarını dinle
+    startButton.addEventListener('click', startSwirl);
+    startButton.addEventListener('touchstart', startSwirl);
+    nameInput.addEventListener('keyup', (e) => {
+      if (e.key === 'Enter') {
+        startSwirl();
+      }
+    });
+  </script>
+</body>
+</html>
